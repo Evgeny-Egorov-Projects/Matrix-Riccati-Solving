@@ -9,6 +9,8 @@
     (slices OP according to grid) should be specified within the program as they are crucial input for
      functions below, but too special for each given problem.
 
+     Notations used in functions are copied from Matthias Eschrig group material on Ricatti equation solving.
+
     Creation Date : 06.10.2016
 
     Author : Eugene Egorov
@@ -24,7 +26,7 @@ from typing import Any
 
 
 def inverse2by2(matrix):
-    #straightforward 2x2 matrix inverse function
+    # straightforward 2x2 matrix inverse function
     val = (1 / (matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1]) *
         np.c_[matrix[1, 1], -matrix[0, 1], -matrix[1, 0], matrix[0, 0]])\
         .reshape(2,2)
@@ -192,7 +194,8 @@ def omegas_for_real_energies(energy, intersections, gammahom, delta_tilda):
     exponent2 = times.dot(omega2)
     mu1 = 0.5 * (sp.diag(exponent1)[::2] + sp.diag(exponent1)[1::2])
     mu2 = 0.5 * (sp.diag(exponent2)[::2] + sp.diag(exponent2)[1::2])
-    Mone= np.diag([1.0 + 0.0j] * 2) #identity matrix of given size - creates it faster than standard numpy
+    Mone= np.diag([1.0 + 0.0j] * 2)
+    # identity matrix of given size - creates it faster than standard numpy
     for k in np.arange(delta_tilda.shape[2]):
         b = delta_tilda4by4[2 * k:2 * k + 2, 2 * k:2 * k + 2].reshape(4)
         A = sp.linalg.block_diag(omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T, omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T)\
@@ -233,7 +236,6 @@ def omegas_for_real_energies(energy, intersections, gammahom, delta_tilda):
 
 
 def propagate(gamma_initial, gamma_homomogeneous_solution, omegas_output, scattering_matrix):
-    gamini = gamma_initial
     s=scattering_matrix
     # profile=np.zeros(gamhom.shape,dtype='complex')
     hom = gamma_homomogeneous_solution
@@ -242,17 +244,18 @@ def propagate(gamma_initial, gamma_homomogeneous_solution, omegas_output, scatte
     boundary1 = int(hom.shape[0] / 2)
     boundary2 = hom.shape[0]
     Mone = np.diag([1.0 + 0.0j] * 2)
-    #check if indexes are in order (array length is even)
+    # check if indexes are in order (array length is even)
     if 2 * boundary1 - boundary2 != 0.0: print(boundary1, boundary2)
     for ro in np.arange(hom.shape[0]):
-        delta = gamini - hom[ro]
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                 .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro == boundary1 - 1 or ro == boundary2:
-            gamini = s.dot(gamini).dot(conj(s))
-        # profile[i]=gamini
-    return gamini
+            gamma_initial = s.dot(gamma_initial).dot(conj(s))
+        # profile[i]=gamma_initial
+    value=gamma_initial
+    return value
 
 
 def calculate_density_of_states(gamma, gamma_tilde):
@@ -272,7 +275,8 @@ def calculate_density_of_states(gamma, gamma_tilde):
 
 def calculate_spectral_density_of_states(gamma, gamma_tilde, sigma, projection):
     val = np.ones((2, gamma[:, 0, 0].size))
-    greens_function = np.empty((2, 2), dtype='complex') #prevents error of casting complex variables on float array
+    greens_function = np.empty((2, 2), dtype='complex')
+    # prevents error of casting complex variables on float array
     Mone = np.diag([1.0 + 0.0j] * 2)
     for i in np.arange(gamma[:, 0, 0].size):
         gamma_times_gamma_tilde = gamma[i].reshape(2, 2).dot(conj(gamma_tilde[i].reshape((2, 2))))
@@ -298,7 +302,7 @@ def gap_equation(gamma, gamma_tilde, pendulum, m):
         av_coefficient = 1.0
     else:
         av_coefficient = -1.0
-    # if costet is from -1 to 1 delete minus in coef or put othervise
+    # if costet is from -1 to 1 delete minus in coef or change if condition
     dphi = 2 * np.pi / (m - 1)
     px = pendulum[:, 0].reshape(m, m)
     py = pendulum[:, 1].reshape(m, m)
@@ -354,7 +358,7 @@ def pendulum_averaging(offdiagonal_component_of_the_greens_function, pendulum, m
         av_coefficient = 1.0
     else:
         av_coefficient = -1.0
-    # if costet is from -1 to 1 delete minus in coef or put othervise
+    # if costet is from -1 to 1 delete minus in coef or change if condition
     dphi = 2 * np.pi / (m - 1)
     px = pendulum[:, 0].reshape(m, m)
     py = pendulum[:, 1].reshape(m, m)
@@ -400,7 +404,6 @@ def pendulum_averaging(offdiagonal_component_of_the_greens_function, pendulum, m
 
 def calculate_magnetic_boundaries(gamma_initial, gammas_homogeneous, omegas_output, scattering_matrix1,
                                   scattering_matrix2, where, propagation_flag):
-    gamini = gamma_initial
     profile = np.ones((gammas_homogeneous.shape[0], 2, 2), dtype='complex')
     hom = gammas_homogeneous
     profile[0] = gamma_initial
@@ -415,30 +418,29 @@ def calculate_magnetic_boundaries(gamma_initial, gammas_homogeneous, omegas_outp
         s1 = scattering_matrix2
         s2 = scattering_matrix1
     for ro in np.arange(hom.shape[0]):
-        delta = gamini - hom[ro]
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                  .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro != 0 and ro != int(hom.shape[0] - 1):
-            profile[ro] = gamini
-        delta = gamini - hom[ro]
+            profile[ro] = gamma_initial
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                 .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro == boundary1:
-            gamini = s1.dot(gamini).dot(conj(s1))
+            gamma_initial = s1.dot(gamma_initial).dot(conj(s1))
         if ro == boundary2:
-            gamini = s2.dot(gamini).dot(conj(s2))
+            gamma_initial = s2.dot(gamma_initial).dot(conj(s2))
         elif where > int(hom.shape[0] / 2):
             if ro != 0 and np.mod(ro + 1, 10) == 0:  # !=0 and ro!=int(hom.shape[0]-1):
-                profile[int((ro + 1) / 10)] = gamini
-    profile[-1] = gamini
-    return gamini, profile
+                profile[int((ro + 1) / 10)] = gamma_initial
+    profile[-1] = gamma_initial
+    return gamma_initial, profile
 
 
 def calculate_magnetic_boundaries_4scatterings(gamma_initial, gamma_homogeneous, omega_output, scattering_matrix1,
                                                scattering_matrix2,  propagation_flag):
-    gamini = gamma_initial
     profile = np.ones((int(gamma_homogeneous.shape[0]), 2, 2), dtype='complex')
     hom = gamma_homogeneous
     profile[0] = gamma_initial
@@ -455,29 +457,28 @@ def calculate_magnetic_boundaries_4scatterings(gamma_initial, gamma_homogeneous,
         s1 = scattering_matrix2
         s2 = scattering_matrix1
     for ro in np.arange(hom.shape[0]):
-        delta = gamini - hom[ro]
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                 .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro != 0 and ro != int(hom.shape[0] - 1):
-            profile[ro] = gamini
-        delta = gamini - hom[ro]
+            profile[ro] = gamma_initial
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                 .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro == boundary1 or ro == boundary3:
             # add if for magnetic scattering
-            gamini = s1.dot(gamini).dot(conj(s1))
+            gamma_initial = s1.dot(gamma_initial).dot(conj(s1))
         if ro == boundary2 or ro == boundary4:
             # add if for magnetic scattering
-            gamini = s2.dot(gamini).dot(conj(s2))
-    profile[-1] = gamini
+            gamma_initial = s2.dot(gamma_initial).dot(conj(s2))
+    profile[-1] = gamma_initial
     return profile
 
 
 def calculate_magnetic_boundaries_endpoints(gamma_initial, gamma_homogeneous, omegas_output, scattering_matrix1,
                                                scattering_matrix2, where, propagation_flag):
-    gamini = gamma_initial
     hom = gamma_homogeneous
     U_hom, V_hom, W_hom = omegas_output
     boundary2 = int(3.0 * hom.shape[0] / 4.0 - 1)
@@ -492,18 +493,18 @@ def calculate_magnetic_boundaries_endpoints(gamma_initial, gamma_homogeneous, om
         s2 = scattering_matrix1
     for ro in np.arange(hom.shape[0]):
         if ro == where and where < 0.5 * hom.shape[0]:
-            where_value[:] = gamini
-        delta = gamini - hom[ro]
+            where_value[:] = gamma_initial
+        delta = gamma_initial - hom[ro]
         inversed_W_hom = inverse2by2(Mone + W_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta))
-        gamini = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
+        gamma_initial = hom[ro] + U_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)].dot(delta).dot(inversed_W_hom)\
                 .dot(V_hom[2 * ro:2 * (ro + 1), 2 * ro:2 * (ro + 1)])
         if ro == boundary1:
-            gamini = s1.dot(gamini).dot(conj(s1))
+            gamma_initial = s1.dot(gamma_initial).dot(conj(s1))
         if ro == boundary2:
-            gamini = s2.dot(gamini).dot(conj(s2))
+            gamma_initial = s2.dot(gamma_initial).dot(conj(s2))
         if ro == where and where > 0.5 * hom.shape[0]:
-            where_value[:] = gamini
-    return gamini, where_value
+            where_value[:] = gamma_initial
+    return gamma_initial, where_value
 
 
 
