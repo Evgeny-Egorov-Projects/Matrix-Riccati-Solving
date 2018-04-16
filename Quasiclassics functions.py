@@ -75,7 +75,7 @@ def homogeneous_gamma(energy, delta, delta_tilda):
                     u_inverse = np.identity(4, dtype='complex')
             else:
                 sq = np.around(epsi + 1j * np.sqrt(-1.0 * m[0, 1] * m[1, 0] - epsi * epsi), dec)
-                if np.abs(sq) == 0:
+                if np.abs(sq) == 0.0:
                     print(m)
                     print('sq= ', sq)
                 else:
@@ -128,23 +128,24 @@ def homogeneous_greens_function(energy, delta, delta_tilda):
     return val  # ,valt
 
 
-def omegas(energy, intersections, gammahom, delta_tilda):
-    gh = sp.linalg.block_diag(*gammahom)
+def omegas(energy, intersections, gamma_homogeneous, delta_tilda):
+    diagonal_gh = sp.linalg.block_diag(*gamma_homogeneous)
     # times=1j*np.diag(intersections)
     times = 0.5 * 1j * np.diag(intersections)
     # 0.5 for double usage in calculate routines
-    delta_tilda4by4 = sp.linalg.block_diag(*delta_tilda.T.reshape(gammahom.shape[0], 2, 2))
+    diagonal_delta_tilda = sp.linalg.block_diag(*delta_tilda.T.reshape(gamma_homogeneous.shape[0], 2, 2))
     en = energy * np.diag(np.ones(intersections.size))
-    solution = np.empty((gammahom.shape[0], 2, 2), dtype='complex')
-    omega1 = en - gh.dot(delta_tilda4by4)
+    solution = np.empty((gamma_homogeneous.shape[0], 2, 2), dtype='complex')
+    omega1 = en - diagonal_gh.dot(diagonal_delta_tilda)
     exponent1 = times.dot(omega1)
-    omega2 = en - delta_tilda4by4.dot(gh)
+    omega2 = en - diagonal_delta_tilda.dot(diagonal_gh)
     exponent2 = times.dot(omega2)
     mu1 = 0.5 * (sp.diag(exponent1)[::2] + sp.diag(exponent1)[1::2])
     mu2 = 0.5 * (sp.diag(exponent2)[::2] + sp.diag(exponent2)[1::2])
-    Mone= np.diag([1.0 + 0.0j] * 2) #identity matrix of given size - creates it faster than standard numpy
+    Mone= np.diag([1.0 + 0.0j] * 2)
+    #identity matrix of given size - creates it faster than standard numpy
     for k in np.arange(delta_tilda.shape[2]):
-        b = delta_tilda4by4[2 * k:2 * k + 2, 2 * k:2 * k + 2].reshape(4)
+        b = diagonal_delta_tilda[2 * k:2 * k + 2, 2 * k:2 * k + 2].reshape(4)
         A = sp.linalg.block_diag(omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T, omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T)\
             + np.c_[np.array([omega2[2 * k, 2 * k], 0, omega2[2 * k, 2 * k + 1], 0]),\
                     np.array([0, omega2[2 * k, 2 * k], 0, omega2[2 * k, 2 * k + 1]]), \
@@ -164,13 +165,13 @@ def omegas(energy, intersections, gammahom, delta_tilda):
         if np.abs(root1) == 0.0:
             exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) * (Mone + omega1power)
         else:
-            exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) * (np.cos(root1) * Mone + np.sin(root1) *
-                                                                            omega1power / root1)
+            exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) \
+                                                          * (np.cos(root1) * Mone + np.sin(root1) * omega1power / root1)
         if np.abs(root2) == 0.0:
             exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) * (Mone + omega2power)
         else:
-            exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) * (np.cos(root2) * Mone + np.sin(root2)
-                                                                            * omega2power / root2)
+            exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) \
+                                                          * (np.cos(root2) * Mone + np.sin(root2) * omega2power / root2)
         # solution[k]=sp.linalg.solve_sylvester(Om2[2*k:2*k+2,2*k:2*k+2],Om1[2*k:2*k+2,2*k:2*k+2],DT[2*k:2*k+2,2*k:2*k+2])
     w = sp.linalg.block_diag(*solution)
     U_homogeneous = sp.linalg.block_diag(exponent1)
@@ -180,24 +181,24 @@ def omegas(energy, intersections, gammahom, delta_tilda):
     return val
 
 
-def omegas_for_real_energies(energy, intersections, gammahom, delta_tilda):
-    gh = sp.linalg.block_diag(*gammahom)
+def omegas_for_real_energies(energy, intersections, gamma_homogeneous, delta_tilda):
+    diagonal_gh = sp.linalg.block_diag(*gamma_homogeneous)
     times = 1j * np.diag(intersections)
     # times=0.5*1j*np.diag(intersections)
     # 0.5 for double usage in calculate routines
-    delta_tilda4by4 = sp.linalg.block_diag(*delta_tilda.T.reshape(gammahom.shape[0], 2, 2))
+    diagonal_delta_tilda = sp.linalg.block_diag(*delta_tilda.T.reshape(gamma_homogeneous.shape[0], 2, 2))
     en = energy * np.diag(np.ones(intersections.size))
-    solution = np.empty((gammahom.shape[0], 2, 2), dtype='complex')
-    omega1 = en - gh.dot(delta_tilda4by4)
+    solution = np.empty((gamma_homogeneous.shape[0], 2, 2), dtype='complex')
+    omega1 = en - diagonal_gh.dot(diagonal_delta_tilda)
     exponent1 = times.dot(omega1)
-    omega2 = en - delta_tilda4by4.dot(gh)
+    omega2 = en - diagonal_delta_tilda.dot(diagonal_gh)
     exponent2 = times.dot(omega2)
     mu1 = 0.5 * (sp.diag(exponent1)[::2] + sp.diag(exponent1)[1::2])
     mu2 = 0.5 * (sp.diag(exponent2)[::2] + sp.diag(exponent2)[1::2])
     Mone= np.diag([1.0 + 0.0j] * 2)
     # identity matrix of given size - creates it faster than standard numpy
     for k in np.arange(delta_tilda.shape[2]):
-        b = delta_tilda4by4[2 * k:2 * k + 2, 2 * k:2 * k + 2].reshape(4)
+        b = diagonal_delta_tilda[2 * k:2 * k + 2, 2 * k:2 * k + 2].reshape(4)
         A = sp.linalg.block_diag(omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T, omega1[2 * k:2 * k + 2, 2 * k:2 * k + 2].T)\
             + np.c_[np.array([omega2[2 * k, 2 * k], 0, omega2[2 * k, 2 * k + 1], 0]),\
                     np.array([0, omega2[2 * k, 2 * k], 0, omega2[2 * k, 2 * k + 1]]), \
@@ -217,15 +218,13 @@ def omegas_for_real_energies(energy, intersections, gammahom, delta_tilda):
         if np.abs(root1) == 0.0:
             exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) * (Mone + omega1power)
         else:
-            exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) * (
-                        np.cos(root1) * Mone + np.sin(root1) *
-                        omega1power / root1)
+            exponent1[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu1[k]) \
+                                                          * (np.cos(root1) * Mone + np.sin(root1) *omega1power / root1)
         if np.abs(root2) == 0.0:
             exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) * (Mone + omega2power)
         else:
-            exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) * (
-                        np.cos(root2) * Mone + np.sin(root2)
-                        * omega2power / root2)
+            exponent2[2 * k:2 * k + 2, 2 * k:2 * k + 2] = np.exp(mu2[k]) \
+                                                          * (np.cos(root2) * Mone + np.sin(root2) * omega2power / root2)
         # solution[k]=sp.linalg.solve_sylvester(Om2[2*k:2*k+2,2*k:2*k+2],Om1[2*k:2*k+2,2*k:2*k+2],DT[2*k:2*k+2,2*k:2*k+2])
     w = sp.linalg.block_diag(*solution)
     U_homogeneous = sp.linalg.block_diag(exponent1)
@@ -281,8 +280,6 @@ def calculate_spectral_density_of_states(gamma, gamma_tilde, sigma, projection):
     for i in np.arange(gamma[:, 0, 0].size):
         gamma_times_gamma_tilde = gamma[i].reshape(2, 2).dot(conj(gamma_tilde[i].reshape((2, 2))))
         greens_function = 1j * inverse2by2(Mone - gamma_times_gamma_tilde).dot(Mone + gamma_times_gamma_tilde)
-        # G=1j*sp.linalg.inv(Mone-ggt,check_finite=False).dot(Mone+ggt)
-        # Dos=0.5*np.sum(np.diag(G).imag)
         if sigma == 'sx':
             val[:, i] = 0.25 * (np.sum(np.diag(greens_function)) + greens_function[0, 1] + greens_function[1, 0]).imag, \
                         0.25 * (np.sum(np.diag(greens_function)) - greens_function[0, 1] - greens_function[1, 0]).imag
@@ -433,7 +430,7 @@ def calculate_magnetic_boundaries(gamma_initial, gammas_homogeneous, omegas_outp
         if ro == boundary2:
             gamma_initial = s2.dot(gamma_initial).dot(conj(s2))
         elif where > int(hom.shape[0] / 2):
-            if ro != 0 and np.mod(ro + 1, 10) == 0:  # !=0 and ro!=int(hom.shape[0]-1):
+            if ro != 0 and np.mod(ro + 1, 10) == 0:
                 profile[int((ro + 1) / 10)] = gamma_initial
     profile[-1] = gamma_initial
     return gamma_initial, profile
